@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tienda GameVerse con Mercado Pago</title>
+<title>Tienda GameVerse Online</title>
 <style>
 body {background:#111827;color:white;font-family:Arial,sans-serif;padding:20px;}
 h1 {text-align:center;font-size:2.5rem;margin-bottom:20px;}
@@ -27,7 +27,7 @@ input, textarea {width:100%;padding:10px;margin-bottom:10px;border:none;border-r
 </style>
 </head>
 <body>
-<h1>🎮 Tienda GameVerse</h1>
+<h1>🎮 Tienda GameVerse Online</h1>
 
 <button id="toggleForm" class="add-button">+ Agregar Juego</button>
 
@@ -49,7 +49,16 @@ const toggleForm = document.getElementById("toggleForm");
 const gameForm = document.getElementById("gameForm");
 const gameList = document.getElementById("gameList");
 
-let games = JSON.parse(localStorage.getItem("games")) || [];
+let games = [];
+
+// Cargar los juegos desde games.json
+fetch('games.json')
+  .then(res => res.json())
+  .then(data => {
+    games = data;
+    renderGames();
+  })
+  .catch(err => console.error("No se pudo cargar games.json", err));
 
 function renderGames() {
   gameList.innerHTML = "";
@@ -72,13 +81,11 @@ function renderGames() {
 }
 
 function buyGame(index){
-  // Mostrar alias antes de continuar
   alert(`💳 Para comprar "${games[index].title}", envía el pago a tu alias de Mercado Pago:\n\n📩 Alias: ${alias}\n\nLuego presiona OK para enviar tu comprobante.`);
 
   const buyer = prompt("Ingrese su nombre:");
   if(!buyer) return;
 
-  // Crear input para subir comprobante desde PC
   const fileInput = document.createElement("input");
   fileInput.type = "file";
   fileInput.accept = "image/*";
@@ -88,10 +95,9 @@ function buyGame(index){
     if(!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const comprobanteData = reader.result; // base64
+      const comprobanteData = reader.result;
       if(!games[index].purchases) games[index].purchases=[];
       games[index].purchases.push({buyer, comprobante:comprobanteData, approved:false});
-      localStorage.setItem("games",JSON.stringify(games));
       renderPurchases(index);
       alert("✅ Comprobante enviado. Espera la aprobación para recibir el juego.");
     };
@@ -119,7 +125,6 @@ function renderPurchases(index){
 
 function approve(gameIndex,purchaseIndex){
   games[gameIndex].purchases[purchaseIndex].approved=true;
-  localStorage.setItem("games",JSON.stringify(games));
   renderPurchases(gameIndex);
   alert("✅ Compra aprobada. El comprador ahora puede descargar el juego.");
 }
@@ -127,7 +132,6 @@ function approve(gameIndex,purchaseIndex){
 function deleteGame(index){
   if(confirm(`¿Seguro que querés eliminar "${games[index].title}"?`)){
     games.splice(index,1);
-    localStorage.setItem("games",JSON.stringify(games));
     renderGames();
   }
 }
@@ -149,13 +153,10 @@ gameForm.addEventListener("submit",(e)=>{
   };
   if(!newGame.title||!newGame.price||!newGame.file){alert("Faltan datos importantes");return;}
   games.push(newGame);
-  localStorage.setItem("games",JSON.stringify(games));
+  renderGames();
   gameForm.reset();
   gameForm.style.display="none";
-  renderGames();
 });
-
-renderGames();
 </script>
 </body>
 </html>

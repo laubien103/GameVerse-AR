@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Mi primer juego",
+    "developer": "Yo",
+    "price": 100,
+    "description": "Un juego divertido",
+    "image": "https://i.imgur.com/imagen.jpg",
+    "file": "https://drive.google.com/file/d/ID_DEL_ARCHIVO/view?usp=sharing",
+    "purchases": []
+  },
+  {
+    "title": "Segundo juego",
+    "developer": "Yo",
+    "price": 150,
+    "description": "Otro juego divertido",
+    "image": "",
+    "file": "https://drive.google.com/file/d/ID_DEL_ARCHIVO2/view?usp=sharing",
+    "purchases": []
+  }
+]
