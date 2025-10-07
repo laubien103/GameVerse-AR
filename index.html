@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tienda GameVerse con Mercado Pago</title>
+<style>
+body {background:#111827;color:white;font-family:Arial,sans-serif;padding:20px;}
+h1 {text-align:center;font-size:2.5rem;margin-bottom:20px;}
+button {cursor:pointer;}
+.add-button {background:#2563eb;padding:10px 20px;border:none;border-radius:8px;float:right;margin-bottom:20px;color:white;}
+.add-button:hover {background:#1e40af;}
+.form {background:#1f2937;padding:20px;border-radius:10px;margin-bottom:20px;}
+input, textarea {width:100%;padding:10px;margin-bottom:10px;border:none;border-radius:6px;background:#374151;color:white;}
+.save-button {background:#16a34a;padding:10px 20px;border:none;border-radius:8px;color:white;}
+.save-button:hover {background:#15803d;}
+.grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;}
+.game-card {background:#1f2937;padding:15px;border-radius:10px;text-align:center;}
+.game-card img {width:100%;height:180px;object-fit:cover;border-radius:10px;margin-bottom:10px;}
+.buy-button {background:#22c55e;padding:10px;border:none;border-radius:8px;color:white;width:100%;}
+.buy-button:hover {background:#16a34a;}
+.delete-button {background:#ef4444;padding:10px;border:none;border-radius:8px;color:white;width:100%;margin-top:5px;}
+.delete-button:hover {background:#b91c1c;}
+.comprobante-img {max-width:100%;border-radius:8px;margin-top:5px;}
+.approve-button {background:#f59e0b;padding:5px 10px;border:none;border-radius:6px;color:white;margin-top:5px;cursor:pointer;}
+.approve-button:hover {background:#b45309;}
+</style>
+</head>
+<body>
+<h1>🎮 Tienda GameVerse</h1>
+
+<button id="toggleForm" class="add-button">+ Agregar Juego</button>
+
+<form id="gameForm" class="form" style="display:none">
+<input type="text" id="title" placeholder="Título del juego" required>
+<input type="text" id="developer" placeholder="Desarrollador">
+<input type="number" id="price" placeholder="Precio en ARS" required min="0">
+<textarea id="description" placeholder="Descripción"></textarea>
+<input type="text" id="image" placeholder="URL de imagen (opcional)">
+<input type="text" id="file" placeholder="Enlace del archivo (.zip, .rar, .exe)" required>
+<button type="submit" class="save-button">Guardar juego</button>
+</form>
+
+<div id="gameList" class="grid"></div>
+
+<script>
+const alias = "laubien.14";
+const toggleForm = document.getElementById("toggleForm");
+const gameForm = document.getElementById("gameForm");
+const gameList = document.getElementById("gameList");
+
+let games = JSON.parse(localStorage.getItem("games")) || [];
+
+function renderGames() {
+  gameList.innerHTML = "";
+  games.forEach((g,index)=>{
+    const card = document.createElement("div");
+    card.className="game-card";
+    card.innerHTML=`
+      ${g.image ? `<img src="${g.image}" alt="${g.title}">` : `<div style="background:#374151;height:180px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Sin imagen</div>`}
+      <h2>${g.title}</h2>
+      <p style="color:#9ca3af;">${g.developer || "Desarrollador desconocido"}</p>
+      <p>${g.description || ""}</p>
+      <p style="font-weight:bold;font-size:18px;">$${g.price} ARS</p>
+      <button class="buy-button" onclick="buyGame(${index})">Comprar</button>
+      <button class="delete-button" onclick="deleteGame(${index})">Eliminar</button>
+      <div id="purchases-${index}" style="margin-top:10px;"></div>
+    `;
+    gameList.appendChild(card);
+    renderPurchases(index);
+  });
+}
+
+function buyGame(index){
+  // Mostrar alias antes de continuar
+  alert(`💳 Para comprar "${games[index].title}", envía el pago a tu alias de Mercado Pago:\n\n📩 Alias: ${alias}\n\nLuego presiona OK para enviar tu comprobante.`);
+
+  const buyer = prompt("Ingrese su nombre:");
+  if(!buyer) return;
+
+  // Crear input para subir comprobante desde PC
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+
+  fileInput.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const comprobanteData = reader.result; // base64
+      if(!games[index].purchases) games[index].purchases=[];
+      games[index].purchases.push({buyer, comprobante:comprobanteData, approved:false});
+      localStorage.setItem("games",JSON.stringify(games));
+      renderPurchases(index);
+      alert("✅ Comprobante enviado. Espera la aprobación para recibir el juego.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  fileInput.click();
+}
+
+function renderPurchases(index){
+  const container=document.getElementById(`purchases-${index}`);
+  container.innerHTML="";
+  if(!games[index].purchases) return;
+  games[index].purchases.forEach((p,i)=>{
+    const div=document.createElement("div");
+    div.style.background="#374151"; div.style.padding="8px"; div.style.borderRadius="6px"; div.style.marginTop="5px";
+    div.innerHTML=`
+      <strong>${p.buyer}</strong> - ${p.approved ? "✅ Aprobado" : "⏳ Pendiente"}<br>
+      <img src="${p.comprobante}" class="comprobante-img">
+      ${!p.approved ? `<button class="approve-button" onclick="approve(${index},${i})">Aprobar</button>` : `<a href="${games[index].file}" target="_blank" class="buy-button" style="margin-top:5px;">Descargar Juego</a>`}
+    `;
+    container.appendChild(div);
+  });
+}
+
+function approve(gameIndex,purchaseIndex){
+  games[gameIndex].purchases[purchaseIndex].approved=true;
+  localStorage.setItem("games",JSON.stringify(games));
+  renderPurchases(gameIndex);
+  alert("✅ Compra aprobada. El comprador ahora puede descargar el juego.");
+}
+
+function deleteGame(index){
+  if(confirm(`¿Seguro que querés eliminar "${games[index].title}"?`)){
+    games.splice(index,1);
+    localStorage.setItem("games",JSON.stringify(games));
+    renderGames();
+  }
+}
+
+toggleForm.addEventListener("click",()=>{
+  gameForm.style.display = gameForm.style.display==="none" ? "block":"none";
+});
+
+gameForm.addEventListener("submit",(e)=>{
+  e.preventDefault();
+  const newGame={
+    title: document.getElementById("title").value,
+    developer: document.getElementById("developer").value,
+    price: document.getElementById("price").value,
+    description: document.getElementById("description").value,
+    image: document.getElementById("image").value,
+    file: document.getElementById("file").value,
+    purchases:[]
+  };
+  if(!newGame.title||!newGame.price||!newGame.file){alert("Faltan datos importantes");return;}
+  games.push(newGame);
+  localStorage.setItem("games",JSON.stringify(games));
+  gameForm.reset();
+  gameForm.style.display="none";
+  renderGames();
+});
+
+renderGames();
+</script>
+</body>
+</html>
